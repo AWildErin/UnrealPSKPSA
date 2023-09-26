@@ -5,4 +5,5 @@
 UPSAImportOptions::UPSAImportOptions()
 {
 	Skeleton = nullptr;
+	bCreateFolder = false;
 }

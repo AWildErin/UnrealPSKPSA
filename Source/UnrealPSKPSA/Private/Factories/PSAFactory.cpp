@@ -86,7 +86,7 @@ UObject* UPSAFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 
 		VAnimInfoBinary Info = Data.AnimInfo[i];
 
-		AnimSequence = FActorXUtils::LocalCreate<UAnimSequence>(UAnimSequence::StaticClass(), Parent, ANSI_TO_TCHAR(Info.Name), Flags);
+		AnimSequence = FActorXUtils::LocalCreate<UAnimSequence>(UAnimSequence::StaticClass(), Parent, ANSI_TO_TCHAR(Info.Name), Flags, SettingsImporter->bCreateFolder);
 
 		USkeleton* Skeleton = SettingsImporter->Skeleton;
 		AnimSequence->SetSkeleton(Skeleton);

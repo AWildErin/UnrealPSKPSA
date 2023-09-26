@@ -23,9 +23,17 @@ public:
 	}
 
 	template <typename T>
-	static T* LocalCreate(UClass* StaticClass, UObject* FactoryParent, FString Filename, EObjectFlags Flags)
+	static T* LocalCreate(UClass* StaticClass, UObject* FactoryParent, FString Filename, EObjectFlags Flags, bool bCreateFolder = false)
 	{
-		auto Package = CreatePackage(*FPaths::Combine(FPaths::GetPath(FactoryParent->GetPathName()), Filename));
+		FString Path = FPaths::GetPath(FactoryParent->GetPathName());
+
+		// Append our package name if needed, here for animsets with multiple sequences
+		if (bCreateFolder)
+		{
+			Path = FPaths::Combine(Path, FactoryParent->GetPathName());
+		}
+
+		auto Package = CreatePackage(*FPaths::Combine(Path, Filename));
 		
 		auto Asset = NewObject<T>(Package, StaticClass, FName(Filename), Flags);
 		return Asset;

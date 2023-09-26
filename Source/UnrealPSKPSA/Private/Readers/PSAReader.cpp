@@ -1,4 +1,4 @@
-﻿#include "Readers/PSAReader.h"
+#include "Readers/PSAReader.h"
 
 PSAReader::PSAReader(const FString Filename)
 {
@@ -21,7 +21,13 @@ bool PSAReader::Read()
 
 		if (CHUNK("ANIMINFO"))
 		{
-			Ar.read(reinterpret_cast<char*>(&AnimInfo), sizeof(VAnimInfoBinary));
+			// Data count is the number of sequences
+			AnimInfo.SetNum(DataCount);
+
+			for (auto i = 0; i < DataCount; i++)
+			{
+				Ar.read(reinterpret_cast<char*>(&AnimInfo[i]), sizeof(VAnimInfoBinary));
+			}
 		}
 		else if (CHUNK("BONENAMES"))
 		{

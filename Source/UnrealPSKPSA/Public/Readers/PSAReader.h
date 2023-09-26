@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "PSKReader.h"
 
 struct VAnimInfoBinary
@@ -41,7 +41,7 @@ public:
 	bool bHasScaleKeys;
 	
 	// PSA
-	VAnimInfoBinary AnimInfo;
+	TArray<VAnimInfoBinary> AnimInfo;
 	TArray<VNamedBoneBinary> Bones;
 	TArray<VQuatAnimKey> AnimKeys;
 	TArray<VAnimScaleKey> ScaleKeys;

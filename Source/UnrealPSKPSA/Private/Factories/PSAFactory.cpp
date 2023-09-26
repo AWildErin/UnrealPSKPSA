@@ -75,61 +75,79 @@ UObject* UPSAFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 	auto Data = PSAReader(Filename);
 	if (!Data.Read()) return nullptr;
 
-	const auto AnimSequence = FActorXUtils::LocalCreate<UAnimSequence>(UAnimSequence::StaticClass(), Parent,  Name.ToString(), Flags);
+	UAnimSequence* AnimSequence = nullptr;
 
-	USkeleton* Skeleton = SettingsImporter->Skeleton;
-	AnimSequence->SetSkeleton(Skeleton);
-	
-	AnimSequence->GetController().OpenBracket(FText::FromString("Importing PSA Animation"));
-	AnimSequence->GetController().InitializeModel();
-	AnimSequence->ResetAnimation();
-	
-	auto Info = Data.AnimInfo;
-	
-	AnimSequence->GetController().SetFrameRate(FFrameRate(Info.AnimRate, 1));
-	AnimSequence->GetController().SetNumberOfFrames(FFrameNumber(Info.NumRawFrames));
-	
-	FScopedSlowTask ImportTask(Data.Bones.Num(), FText::FromString("Importing PSA Animation"));
-	ImportTask.MakeDialog(false);
-	for (auto BoneIndex = 0; BoneIndex < Data.Bones.Num(); BoneIndex++)
+	for (int i = 0; i < Data.AnimInfo.Num(); i++)
 	{
-		auto Bone = Data.Bones[BoneIndex];
-		auto BoneName = FName(Bone.Name);
-		
-		ImportTask.DefaultMessage = FText::FromString(FString::Printf(TEXT("Bone %s: %d/%d"), *BoneName.ToString(), BoneIndex+1, Data.Bones.Num()));
-		ImportTask.EnterProgressFrame();
-		
-		TArray<FVector3f> PositionalKeys;
-		TArray<FQuat4f> RotationalKeys;
-		TArray<FVector3f> ScaleKeys;
-		for (auto Frame = 0; Frame < Info.NumRawFrames; Frame++)
+		if (Data.AnimInfo.IsEmpty() || !Data.AnimInfo.IsValidIndex(i))
 		{
-			auto KeyIndex = BoneIndex + Frame * Data.Bones.Num();
-			auto AnimKey = Data.AnimKeys[KeyIndex];
-
-			UE_LOG(LogTemp, Warning, TEXT(" Frame %s"), *AnimKey.Position.ToString());
-			PositionalKeys.Add(FVector3f(AnimKey.Position.X, -AnimKey.Position.Y, AnimKey.Position.Z));
-			RotationalKeys.Add(FQuat4f(-AnimKey.Orientation.X, AnimKey.Orientation.Y, -AnimKey.Orientation.Z, (BoneIndex == 0) ? AnimKey.Orientation.W : -AnimKey.Orientation.W).GetNormalized());
-			ScaleKeys.Add(Data.bHasScaleKeys ? Data.ScaleKeys[KeyIndex].ScaleVector : FVector3f::OneVector);
-
+			continue;
 		}
 
-		AnimSequence->GetController().AddBoneCurve(BoneName);
-		AnimSequence->GetController().SetBoneTrackKeys(BoneName, PositionalKeys, RotationalKeys, ScaleKeys);
-	}
+		VAnimInfoBinary Info = Data.AnimInfo[i];
+
+		AnimSequence = FActorXUtils::LocalCreate<UAnimSequence>(UAnimSequence::StaticClass(), Parent, ANSI_TO_TCHAR(Info.Name), Flags);
+
+		USkeleton* Skeleton = SettingsImporter->Skeleton;
+		AnimSequence->SetSkeleton(Skeleton);
 	
+		AnimSequence->GetController().OpenBracket(FText::FromString("Importing PSA Animation"));
+		AnimSequence->GetController().InitializeModel();
+		AnimSequence->ResetAnimation();
+	
+
+		AnimSequence->GetController().SetFrameRate(FFrameRate(Info.AnimRate, 1));
+		AnimSequence->GetController().SetNumberOfFrames(FFrameNumber(Info.NumRawFrames));
+	
+		FScopedSlowTask ImportTask(Data.Bones.Num(), FText::FromString("Importing PSA Animation"));
+		ImportTask.MakeDialog(false);
+		for (auto BoneIndex = 0; BoneIndex < Data.Bones.Num(); BoneIndex++)
+		{
+
+			auto Bone = Data.Bones[BoneIndex];
+			auto BoneName = FName(Bone.Name);
+
+			UE_LOG(LogTemp, Warning, TEXT("Bone: %s: %d/%d"), *BoneName.ToString(), BoneIndex + 1, Data.Bones.Num())
+			ImportTask.DefaultMessage = FText::FromString(FString::Printf(TEXT("Bone %s: %d/%d"), *BoneName.ToString(), BoneIndex+1, Data.Bones.Num()));
+			ImportTask.EnterProgressFrame();
+
+			TArray<FVector3f> PositionalKeys;
+			TArray<FQuat4f> RotationalKeys;
+			TArray<FVector3f> ScaleKeys;
+			for (auto Frame = 0; Frame < Info.NumRawFrames; Frame++)
+			{
+				auto KeyIndex = BoneIndex + (Info.FirstRawFrame + Frame) * Data.Bones.Num();
+
+				// Only continue if our bone actually has anim keys
+				if (Data.AnimKeys.IsValidIndex(KeyIndex))
+				{
+					auto AnimKey = Data.AnimKeys[KeyIndex];
+
+					UE_LOG(LogTemp, Warning, TEXT(" Frame %s"), *AnimKey.Position.ToString());
+					PositionalKeys.Add(FVector3f(AnimKey.Position.X, -AnimKey.Position.Y, AnimKey.Position.Z));
+					RotationalKeys.Add(FQuat4f(-AnimKey.Orientation.X, AnimKey.Orientation.Y, -AnimKey.Orientation.Z, (BoneIndex == 0) ? AnimKey.Orientation.W : -AnimKey.Orientation.W).GetNormalized());
+					ScaleKeys.Add(Data.bHasScaleKeys ? Data.ScaleKeys[KeyIndex].ScaleVector : FVector3f::OneVector);
+				}
+			}
+
+			AnimSequence->GetController().AddBoneCurve(BoneName);
+			AnimSequence->GetController().SetBoneTrackKeys(BoneName, PositionalKeys, RotationalKeys, ScaleKeys);
+		}
+	
+		AnimSequence->GetController().NotifyPopulated();
+		AnimSequence->GetController().CloseBracket();
+		AnimSequence->Modify(true);
+
+		AnimSequence->PostEditChange();
+		FAssetRegistryModule::AssetCreated(AnimSequence);
+		AnimSequence->MarkPackageDirty();
+
+	}
+
 	if (!bImportAll)
 	{
 		SettingsImporter->bInitialized = false;
 	}
-	
-	AnimSequence->GetController().NotifyPopulated();
-	AnimSequence->GetController().CloseBracket();
-	AnimSequence->Modify(true);
-
-	AnimSequence->PostEditChange();
-	FAssetRegistryModule::AssetCreated(AnimSequence);
-	AnimSequence->MarkPackageDirty();
 
 	FGlobalComponentReregisterContext RecreateComponents;
 	

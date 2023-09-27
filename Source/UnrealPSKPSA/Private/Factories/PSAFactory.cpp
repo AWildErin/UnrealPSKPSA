@@ -114,7 +114,6 @@ UObject* UPSAFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 			auto Bone = Data.Bones[BoneIndex];
 			auto BoneName = FName(Bone.Name);
 
-			UE_LOG(LogTemp, Warning, TEXT("Bone: %s: %d/%d"), *BoneName.ToString(), BoneIndex + 1, Data.Bones.Num())
 			ImportTask.DefaultMessage = FText::FromString(FString::Printf(TEXT("Bone %s: %d/%d"), *BoneName.ToString(), BoneIndex+1, Data.Bones.Num()));
 			ImportTask.EnterProgressFrame();
 
@@ -130,7 +129,6 @@ UObject* UPSAFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 				{
 					auto AnimKey = Data.AnimKeys[KeyIndex];
 
-					UE_LOG(LogTemp, Warning, TEXT(" Frame %s"), *AnimKey.Position.ToString());
 					PositionalKeys.Add(FVector3f(AnimKey.Position.X, -AnimKey.Position.Y, AnimKey.Position.Z));
 					RotationalKeys.Add(FQuat4f(-AnimKey.Orientation.X, AnimKey.Orientation.Y, -AnimKey.Orientation.Z, (BoneIndex == 0) ? AnimKey.Orientation.W : -AnimKey.Orientation.W).GetNormalized());
 					ScaleKeys.Add(Data.bHasScaleKeys ? Data.ScaleKeys[KeyIndex].ScaleVector : FVector3f::OneVector);

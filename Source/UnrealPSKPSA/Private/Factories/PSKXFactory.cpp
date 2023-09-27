@@ -11,6 +11,8 @@
 #include "ComponentReregisterContext.h"
 #include "IAssetTools.h"
 #include "Utils/ActorXUtils.h"
+#include "Widgets/PSKImportOptions.h"
+#include "Widgets/SPSKImportOption.h"
 
 /* UTextAssetFactory structors
  *****************************************************************************/
@@ -22,6 +24,7 @@ UPSKXFactory::UPSKXFactory( const FObjectInitializer& ObjectInitializer )
 	SupportedClass = UStaticMesh::StaticClass();
 	bCreateNew = false;
 	bEditorImport = true;
+	SettingsImporter = CreateDefaultSubobject<UPSKImportOptions>(TEXT("Model Options"));
 }
 
 /* UFactory overrides
@@ -29,6 +32,35 @@ UPSKXFactory::UPSKXFactory( const FObjectInitializer& ObjectInitializer )
 
 UObject* UPSKXFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Name, EObjectFlags Flags, const FString& Filename, const TCHAR* Params, FFeedbackContext* Warn, bool& bOutOperationCanceled)
 {
+	FScopedSlowTask SlowTask(5, NSLOCTEXT("PSKFactory", "BeginReadPSKFile", "Opening PSK file."), true);
+	if (Warn->GetScopeStack().Num() == 0)
+	{
+		// We only display this slow task if there is no parent slowtask, because otherwise it is redundant and doesn't display any relevant information on the
+		// progress. It is primarly used to regroup all the smaller import sub-tasks for a smoother progression.
+		SlowTask.MakeDialog(true);
+	}
+	SlowTask.EnterProgressFrame(0);
+
+	// picker
+	if (SettingsImporter->bInitialized == false)
+	{
+		TSharedPtr<SPSKImportOption> ImportOptionsWindow;
+		TSharedPtr<SWindow> ParentWindow;
+		if (FModuleManager::Get().IsModuleLoaded("MainFrame"))
+		{
+			IMainFrameModule& MainFrame = FModuleManager::LoadModuleChecked<IMainFrameModule>("MainFrame");
+			ParentWindow = MainFrame.GetParentWindow();
+		}
+
+		TSharedRef<SWindow> Window = SNew(SWindow).Title(FText::FromString(TEXT("PSK Import Options"))).SizingRule(ESizingRule::Autosized);
+		Window->SetContent(SAssignNew(ImportOptionsWindow, SPSKImportOption).WidgetWindow(Window));
+		SettingsImporter = ImportOptionsWindow.Get()->Stun;
+		FSlateApplication::Get().AddModalWindow(Window, ParentWindow, false);
+		bImport = ImportOptionsWindow.Get()->ShouldImport();
+		bImportAll = ImportOptionsWindow.Get()->ShouldImportAll();
+		SettingsImporter->bInitialized = true;
+	}
+
 	auto Data = PSKReader(Filename);
 	if (!Data.Read()) return nullptr;
 	
@@ -83,8 +115,17 @@ UObject* UPSKXFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName N
 	for (auto i = 0; i < Data.Materials.Num(); i++)
 	{
 		auto PskMaterial = Data.Materials[i];
-		auto MaterialAdd = FActorXUtils::LocalFindOrCreate<UMaterial>(UMaterial::StaticClass(), Parent, PskMaterial.MaterialName, Flags);
-		StaticMesh->GetStaticMaterials().Add(FStaticMaterial(MaterialAdd));
+
+		if (SettingsImporter->bCreateMaterials)
+		{
+			auto MaterialAdd = FActorXUtils::LocalFindOrCreate<UMaterial>(UMaterial::StaticClass(), Parent, PskMaterial.MaterialName, Flags);
+			StaticMesh->GetStaticMaterials().Add(FStaticMaterial(MaterialAdd));
+		}
+		else
+		{
+			StaticMesh->GetStaticMaterials().Add(FStaticMaterial(nullptr, PskMaterial.MaterialName));
+		}
+
 		StaticMesh->GetSectionInfoMap().Set(0, i, FMeshSectionInfo(i));
 	}
 	

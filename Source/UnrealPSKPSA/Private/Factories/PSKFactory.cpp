@@ -9,6 +9,12 @@
 #include "Materials/MaterialInstanceConstant.h"
 #include "Rendering/SkeletalMeshLODModel.h"
 #include "Rendering/SkeletalMeshModel.h"
+#include "Widgets/PSKImportOptions.h"
+#include "Widgets/SPSKImportOption.h"
+#include "Interfaces/IMainFrameModule.h"
+#include "Misc/ScopedSlowTask.h"
+#include "Materials/Material.h"
+#include "MaterialDomain.h"
 
 /* UTextAssetFactory structors
  *****************************************************************************/
@@ -20,6 +26,7 @@ UPSKFactory::UPSKFactory( const FObjectInitializer& ObjectInitializer )
 	SupportedClass = USkeletalMesh::StaticClass();
 	bCreateNew = false;
 	bEditorImport = true;
+	SettingsImporter = CreateDefaultSubobject<UPSKImportOptions>(TEXT("Model Options"));
 }
 
 /* UFactory overrides
@@ -27,6 +34,35 @@ UPSKFactory::UPSKFactory( const FObjectInitializer& ObjectInitializer )
 
 UObject* UPSKFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Name, EObjectFlags Flags, const FString& Filename, const TCHAR* Params, FFeedbackContext* Warn, bool& bOutOperationCanceled)
 {
+	FScopedSlowTask SlowTask(5, NSLOCTEXT("PSKFactory", "BeginReadPSKFile", "Opening PSK file."), true);
+	if (Warn->GetScopeStack().Num() == 0)
+	{
+		// We only display this slow task if there is no parent slowtask, because otherwise it is redundant and doesn't display any relevant information on the
+		// progress. It is primarly used to regroup all the smaller import sub-tasks for a smoother progression.
+		SlowTask.MakeDialog(true);
+	}
+	SlowTask.EnterProgressFrame(0);
+
+	// picker
+	if (SettingsImporter->bInitialized == false)
+	{
+		TSharedPtr<SPSKImportOption> ImportOptionsWindow;
+		TSharedPtr<SWindow> ParentWindow;
+		if (FModuleManager::Get().IsModuleLoaded("MainFrame"))
+		{
+			IMainFrameModule& MainFrame = FModuleManager::LoadModuleChecked<IMainFrameModule>("MainFrame");
+			ParentWindow = MainFrame.GetParentWindow();
+		}
+
+		TSharedRef<SWindow> Window = SNew(SWindow).Title(FText::FromString(TEXT("PSK Import Options"))).SizingRule(ESizingRule::Autosized);
+		Window->SetContent(SAssignNew(ImportOptionsWindow, SPSKImportOption).WidgetWindow(Window));
+		SettingsImporter = ImportOptionsWindow.Get()->Stun;
+		FSlateApplication::Get().AddModalWindow(Window, ParentWindow, false);
+		bImport = ImportOptionsWindow.Get()->ShouldImport();
+		bImportAll = ImportOptionsWindow.Get()->ShouldImportAll();
+		SettingsImporter->bInitialized = true;
+	}
+
 	auto Data = PSKReader(Filename);
 	if (!Data.Read()) return nullptr;
 
@@ -134,8 +170,17 @@ UObject* UPSKFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 	{
 		SkeletalMeshImportData::FMaterial Material;
 		Material.MaterialImportName = PskMaterial.MaterialName;
-		auto MaterialAdd = FActorXUtils::LocalFindOrCreate<UMaterial>(UMaterial::StaticClass(), Parent, PskMaterial.MaterialName, Flags);
-		Material.Material = MaterialAdd;
+
+		if (SettingsImporter->bCreateMaterials)
+		{
+			auto MaterialAdd = FActorXUtils::LocalFindOrCreate<UMaterial>(UMaterial::StaticClass(), Parent, PskMaterial.MaterialName, Flags);
+			Material.Material = MaterialAdd;
+		}
+		else
+		{
+			Material.Material = UMaterial::GetDefaultMaterial(MD_Surface);
+		}
+
 		SkeletalMeshImportData.Materials.Add(Material);
 	}
 	
@@ -206,7 +251,10 @@ UObject* UPSKFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 
 	for (auto Material : SkeletalMeshImportData.Materials)
 	{
-		SkeletalMesh->GetMaterials().Add(FSkeletalMaterial(Material.Material.Get()));
+		FSkeletalMaterial SkelMat(Material.Material.Get());
+		SkelMat.MaterialSlotName = FName(Material.MaterialImportName);
+
+		SkeletalMesh->GetMaterials().Add(SkelMat);
 	}
 
 	// morphdata here

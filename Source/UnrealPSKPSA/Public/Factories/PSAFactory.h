@@ -20,6 +20,7 @@ class UNREALPSKPSA_API UPSAFactory : public UFactory
 
 	bool bImport;
 	bool bImportAll;
+	bool bCancel;
 
 	virtual UObject* FactoryCreateFile(UClass* Class, UObject* Parent, FName Name, EObjectFlags Flags, const FString& Filename, const TCHAR* Params, FFeedbackContext* Warn, bool& bOutOperationCanceled) override;
 };

@@ -45,8 +45,11 @@ public:
 	/** If the current settings should be applied to all items being imported */
 	bool ShouldImportAll();
 
+	/** Did we cancel */
+	bool ShouldCancel();
 
 	FReply OnImportAll();
+
 	/** Called when 'Apply' button is pressed */
 	FReply OnImport();
 

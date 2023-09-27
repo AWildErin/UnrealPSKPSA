@@ -96,6 +96,10 @@ bool SPSKImportOption::ShouldImportAll()
 {
 	return UserDlgResponse == EPSKImportOptionDlgResponse::ImportAll;
 }
+bool SPSKImportOption::ShouldCancel()
+{
+	return UserDlgResponse == EPSKImportOptionDlgResponse::Cancel;
+}
 FReply SPSKImportOption::OnImportAll()
 {
 	UserDlgResponse = EPSKImportOptionDlgResponse::ImportAll;
@@ -109,7 +113,7 @@ FReply SPSKImportOption::OnImport()
 FReply SPSKImportOption::OnCancel()
 {
 	UserDlgResponse = EPSKImportOptionDlgResponse::Cancel;
-	return FReply::Handled();
+	return HandleImport();
 }
 FReply SPSKImportOption::HandleImport()
 {

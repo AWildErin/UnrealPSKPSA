@@ -60,7 +60,14 @@ UObject* UPSKFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 		FSlateApplication::Get().AddModalWindow(Window, ParentWindow, false);
 		bImport = ImportOptionsWindow.Get()->ShouldImport();
 		bImportAll = ImportOptionsWindow.Get()->ShouldImportAll();
+		bCancel = ImportOptionsWindow.Get()->ShouldCancel();
 		SettingsImporter->bInitialized = true;
+	}
+
+	// Cancel out the import
+	if (bCancel)
+	{
+		return nullptr;
 	}
 
 	auto Data = PSKReader(Filename);
@@ -270,6 +277,11 @@ UObject* UPSKFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 	Skeleton->PostEditChange();
 	FAssetRegistryModule::AssetCreated(Skeleton);
 	Skeleton->MarkPackageDirty();
+
+	if (!bImportAll)
+	{
+		SettingsImporter->bInitialized = false;
+	}
 
 	FGlobalComponentReregisterContext RecreateComponents;
 

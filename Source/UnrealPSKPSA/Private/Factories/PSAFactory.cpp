@@ -66,11 +66,18 @@ UObject* UPSAFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
         FSlateApplication::Get().AddModalWindow(Window, ParentWindow, false);
         bImport = ImportOptionsWindow.Get()->ShouldImport();
         bImportAll = ImportOptionsWindow.Get()->ShouldImportAll();
+		bCancel = ImportOptionsWindow.Get()->ShouldCancel();
         SettingsImporter->bInitialized = true;
     }
 
 	/* UFactory overrides
 	 *****************************************************************************/
+
+	// Cancel out the import
+	if (bCancel)
+	{
+		return nullptr;
+	}
 
 	auto Data = PSAReader(Filename);
 	if (!Data.Read()) return nullptr;

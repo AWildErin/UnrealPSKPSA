@@ -96,6 +96,10 @@ bool SPSAImportOption::ShouldImportAll()
 {
 	return UserDlgResponse == EPSAImportOptionDlgResponse::ImportAll;
 }
+bool SPSAImportOption::ShouldCancel()
+{
+	return UserDlgResponse == EPSAImportOptionDlgResponse::Cancel;
+}
 FReply SPSAImportOption::OnImportAll()
 {
 	UserDlgResponse = EPSAImportOptionDlgResponse::ImportAll;
@@ -109,7 +113,7 @@ FReply SPSAImportOption::OnImport()
 FReply SPSAImportOption::OnCancel()
 {
 	UserDlgResponse = EPSAImportOptionDlgResponse::Cancel;
-	return FReply::Handled();
+	return HandleImport();
 }
 FReply SPSAImportOption::HandleImport()
 {

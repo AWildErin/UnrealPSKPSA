@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <fstream>
 
 #define CHUNK(ChunkName) (strncmp(Chunk.ChunkID, ChunkName, strlen(ChunkName)) == 0)
@@ -65,17 +65,27 @@ struct VRawBoneInfluence
 	int BoneIdx;
 };
 
+struct Socket
+{
+	FString SocketName;
+	FString BoneName;
+	FVector RelativeLocation;
+	FRotator RelativeRotation;
+	FVector RelativeScale;
+};
+
 class PSKReader
 {
 	
 public:
-	PSKReader(const FString Filename);
+	PSKReader(const FString Filename, bool bLoadPropertiesFile = false);
 	bool Read();
 
 	// Switches
 	bool bHasVertexNormals;
 	bool bHasVertexColors;
 	bool bHasExtraUVs;
+	bool bLoadProperties;
 
 	// PSKX
 	TArray<FVector3f> Vertices;
@@ -90,14 +100,16 @@ public:
 	TArray<VNamedBoneBinary> Bones;
 	TArray<VRawBoneInfluence> Influences;
 
+	// UModel Properties
+	TArray<Socket> Sockets;
+
 private:
+	/** Handles loading UModel property files */
+	bool ReadPropertiesFile();
+
+	FString FileName;
 	bool CheckHeader(const VChunkHeader Header) const;
 	const char* HeaderBytes = "ACTRHEAD" + 0x00 + 0x00 + 0x00 + 0x00 + 0x00 + 0x00 + 0x00 + 0x00 + 0x00 + 0x00 + 0x00 + 0x00;
 	std::ifstream Ar;
 	
 };
-
-
-
-
-

@@ -5,4 +5,9 @@
 UPSKImportOptions::UPSKImportOptions()
 {
 	bCreateMaterials = true;
+
+	bLoadProperties = false;
+	bCreateSockets = false;
+
+	bSkeletalMesh = false;
 }

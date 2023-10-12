@@ -6,6 +6,7 @@
 #include "Readers/PSKReader.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/SkinnedAssetCommon.h"
+#include "Engine/SkeletalMeshSocket.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "Rendering/SkeletalMeshLODModel.h"
 #include "Rendering/SkeletalMeshModel.h"
@@ -57,6 +58,10 @@ UObject* UPSKFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 		TSharedRef<SWindow> Window = SNew(SWindow).Title(FText::FromString(TEXT("PSK Import Options"))).SizingRule(ESizingRule::Autosized);
 		Window->SetContent(SAssignNew(ImportOptionsWindow, SPSKImportOption).WidgetWindow(Window));
 		SettingsImporter = ImportOptionsWindow.Get()->Stun;
+
+		// Mark us as a skeletal mesh
+		SettingsImporter->bSkeletalMesh = true;
+
 		FSlateApplication::Get().AddModalWindow(Window, ParentWindow, false);
 		bImport = ImportOptionsWindow.Get()->ShouldImport();
 		bImportAll = ImportOptionsWindow.Get()->ShouldImportAll();
@@ -70,7 +75,7 @@ UObject* UPSKFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 		return nullptr;
 	}
 
-	auto Data = PSKReader(Filename);
+	auto Data = PSKReader(Filename, SettingsImporter->bLoadProperties);
 	if (!Data.Read()) return nullptr;
 
 	TArray<FColor> VertexColorsByPoint;
@@ -262,6 +267,19 @@ UObject* UPSKFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 		SkelMat.MaterialSlotName = FName(Material.MaterialImportName);
 
 		SkeletalMesh->GetMaterials().Add(SkelMat);
+	}
+
+	// Assign sockets to the model
+	for (auto Socket : Data.Sockets)
+	{
+		USkeletalMeshSocket* NewSocket = NewObject<USkeletalMeshSocket>(SkeletalMesh);
+		NewSocket->SocketName = FName(Socket.SocketName);
+		NewSocket->BoneName = FName(Socket.BoneName);
+		NewSocket->RelativeLocation = Socket.RelativeLocation;
+		NewSocket->RelativeRotation = Socket.RelativeRotation;
+		NewSocket->RelativeScale = Socket.RelativeScale;
+
+		SkeletalMesh->AddSocket(NewSocket);
 	}
 
 	// morphdata here

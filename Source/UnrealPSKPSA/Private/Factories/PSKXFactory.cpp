@@ -6,6 +6,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "Editor/UnrealEd/Classes/Factories/MaterialInstanceConstantFactoryNew.h"
+#include "Engine/StaticMeshSocket.h"
 #include "EditorAssetLibrary.h"
 #include "AssetToolsModule.h"
 #include "ComponentReregisterContext.h"
@@ -135,7 +136,19 @@ UObject* UPSKXFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName N
 
 		StaticMesh->GetSectionInfoMap().Set(0, i, FMeshSectionInfo(i));
 	}
-	
+
+	// Assign sockets to the model
+	//for (auto Socket : Data.Sockets)
+	//{
+	//	UStaticMeshSocket* NewSocket = NewObject<UStaticMeshSocket>(StaticMesh);
+	//	NewSocket->SocketName = FName(Socket.SocketName);
+	//	NewSocket->RelativeLocation = Socket.RelativeLocation;
+	//	NewSocket->RelativeRotation = Socket.RelativeRotation;
+	//	NewSocket->RelativeScale = Socket.RelativeScale;
+	//
+	//	StaticMesh->AddSocket(NewSocket);
+	//}
+
 	auto& SourceModel = StaticMesh->AddSourceModel();
 	SourceModel.BuildSettings.bBuildReversedIndexBuffer = false;
 	SourceModel.BuildSettings.bRecomputeTangents = false;

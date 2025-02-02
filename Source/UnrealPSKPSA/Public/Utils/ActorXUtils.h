@@ -30,7 +30,7 @@ public:
 		// Append our package name if needed, here for animsets with multiple sequences
 		if (bCreateFolder)
 		{
-			Path = FPaths::Combine(Path, FactoryParent->GetPathName());
+			Path = FactoryParent->GetName();
 		}
 
 		auto Package = CreatePackage(*FPaths::Combine(Path, Filename));

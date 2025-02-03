@@ -103,7 +103,13 @@ UObject* UPSAFactory::FactoryCreateFile(UClass* Class, UObject* Parent, FName Na
 		AnimSequence->ResetAnimation();
 	
 
-		AnimSequence->GetController().SetFrameRate(FFrameRate(Info.AnimRate, 1));
+		float AnimRate = Info.AnimRate;
+		if (!FMath::IsFinite(AnimRate))
+		{
+			AnimRate = 1.f;
+		}
+
+		AnimSequence->GetController().SetFrameRate(FFrameRate(AnimRate, 1));
 		AnimSequence->GetController().SetNumberOfFrames(FFrameNumber(Info.NumRawFrames));
 	
 		FScopedSlowTask ImportTask(Data.Bones.Num(), FText::FromString("Importing PSA Animation"));
